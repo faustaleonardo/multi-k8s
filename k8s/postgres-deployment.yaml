@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      component: postgres
+  template:
+    metadata:
+      labels:
+        component: postgres
+    spec:
+      # tell Kubernetes this container needs volume
+      volumes:
+        - name: postgres-storage
+          persistentVolumeClaim:
+            claimName: database-persistent-volume-claim
+      containers:
+        - name: postgres
+          image: postgres:9.5.18
+          ports:
+            # default port for postgres
+            - containerPort: 5432
+          volumeMounts:
+            - name: postgres-storage
+              # the directory where we want to store our postgres data
+              mountPath: /var/lib/postgresql/data
+              subPath: postgres
+          env:
+            # tell postgres to use this password, as opposed to the default
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: pgpassword
+                  key: PGPASSWORD
