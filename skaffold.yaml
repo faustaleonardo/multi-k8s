@@ -1,0 +1,22 @@
+apiVersion: skaffold/v1beta2
+kind: Config
+build:
+  # prevent skaffold to push into docker registery, such as docker hub or etc
+  local:
+    push: false
+  # tell skaffold what it needs to manage
+  artifacts:
+    - image: faustaleonardo/multi-client
+      context: client
+      docker:
+        dockerfile: Dockerfile.dev
+      # if there is something changes in js, css or html file, skaffold will update them in the pod as well
+      sync:
+        '**/*.js': .
+        '**/*.css': .
+        '**/*.html': .
+# tell skaffold which config files to manage
+deploy:
+  kubectl:
+    manifests:
+      - k8s/client-deployment.yaml
