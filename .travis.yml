@@ -1,0 +1,40 @@
+sudo: required
+# tell travis we require docker to be pre-installed
+services:
+  - docker
+env:
+  global:
+    # store commit version to SHA
+    - SHA=$(git rev-parse HEAD)
+    # disable asking input from gcloud
+    - CLOUDSDK_CORE_DISABLE_PROMPTS=1
+before_install:
+  # ask travis to use the encrypted service account and extract it to service-acount.json to be later used by google cloud
+  - openssl aes-256-cbc -K $encrypted_0c35eebf403c_key -iv $encrypted_0c35eebf403c_iv -in service-account.json.enc -out service-account.json -d
+  # download google cloud sdk and install
+  - curl https://sdk.cloud.google.com | bash > /dev/null;
+  # look at the default installatin of google sdk
+  - source $HOME/google-cloud-sdk/path.bash.inc
+  # install and update kubectl
+  - gcloud components update kubectl
+  # tell google cloud who we are
+  - gcloud auth activate-service-account --key-file service-account.json
+  - gcloud config set project devmeetup-5823a
+  - gcloud config set compute/zone asia-southeast1
+  - gcloud container clusters get-credentials multi-cluster
+  # login to docker and build the image
+  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+  - docker build -t stephengrider/react-test -f ./client/Dockerfile.dev ./client
+
+# test
+script:
+  - docker run -e CI=true stephengrider/react-test npm test
+
+# deployment
+deploy:
+  # tell travis to run the custom script as we will take care of our deployment
+  provider: script
+  script: bash ./deploy.sh
+  # on deploy for the branch master
+  on:
+    branch: master
