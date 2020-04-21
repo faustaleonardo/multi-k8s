@@ -8,9 +8,30 @@ metadata:
     # tell kubernetes to rewrite any incoming requests to just /
     # for instance, /api to /
     nginx.ingress.kubernetes.io/rewrite-target: /$1
+    cert-manager.io/cluster-issuer: 'letsencrypt-prod'
+    # ensure we always serve our traffic in https
+    nginx.ingress.kubernetes.io/ssl-redirect: 'true'
 spec:
+  # serve https traffic
+  tls:
+    - hosts:
+        - medanstore.xyz
+        - www.medanstore.xyz
+      secretName: medanstore.xyz
   rules:
-    - http:
+    - host: medanstore.xyz
+      http:
+        paths:
+          - path: /?(.*)
+            backend:
+              serviceName: client-cluster-ip-service
+              servicePort: 3000
+          - path: /api/?(.*)
+            backend:
+              serviceName: server-cluster-ip-service
+              servicePort: 5000
+    - host: www.medanstore.xyz
+      http:
         paths:
           - path: /?(.*)
             backend:
